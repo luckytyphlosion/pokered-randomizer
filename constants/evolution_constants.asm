@@ -16,6 +16,7 @@ EV_STATBASED EQU 10 ; tyrogue
 EV_MOVE EQU 11
 EV_FRIENDSHIP EQU 12 ; stat-exp based
 EV_LOCATION EQU 13 ; location based
+EV_SHEDINJA EQU 14 ; add shedinja
 
 ; Evo Sub-Sub-Types
 EV_TIME EQU 7 ; bit 7
