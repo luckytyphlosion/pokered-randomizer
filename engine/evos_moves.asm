@@ -24,6 +24,8 @@ EvolutionAfterBattle: ; 3ad1c (e:6d1c)
 	push hl
 
 Evolution_PartyMonLoop: ; loop over party mons
+	xor a
+	ld [hEvolveFlag],a
 	ld hl, wWhichPokemon
 	inc [hl]
 	pop hl
@@ -66,6 +68,13 @@ Evolution_PartyMonLoop: ; loop over party mons
 	ld a, [hli]
 	and a ; have we reached the end of the evolution data?
 	jr z, Evolution_PartyMonLoop
+	ld a,[hEvolveFlag]
+	bit 1,a
+	res 1,a
+	ld [hEvolveFlag],a
+	call z,.shedinjacheck
+	and a
+	jr z, Evolution_PartyMonLoop
 	ld b, a ; evolution type
 	cp EV_TRADE
 	jr z, .checkTradeEvo
@@ -106,8 +115,43 @@ Evolution_PartyMonLoop: ; loop over party mons
 	jp c, .nextEvoEntry2 ; if so, go the next evolution entry
 .asm_3adb6
 	ld [W_CURENEMYLVL], a
+	inc hl ; skip over possible pokemon to evo/extra data
+	ld a,[hld] ; go back to possible pokemon to evo/extra data
+	cp EV_TRADE ; reading next evolution data?
+	jr nc,.notconditionalevo
+	inc hl
+	ld b,a
+	ld a,%10000000 ; flag for time based evo
+	and b
+	ld b,a
+	ld a,[hEvolveFlags]
+	or b ; copy time based evo flag state to hEvolveFlags
+	ld [hEvolveFlags],a
+	ld a,[hli] ; get back the evo subtype data and have hl read pokemon to evo
+	ld d,h
+	ld e,l
+	push hl
+	and $7F ; reset time based evo flag
+	add a ; double a for jumptable
+	ld hl,EvoSubTypesPointerTable
+	add l
+	jr nc,.nocarry
+	inc h
+.nocarry
+	ld l,a
+	ld a,[hli]
+	ld h,[hl]
+	ld l,a
+	call JumpToAddress
+	pop hl
+	jp c,.nextEvoEntry2
+	
+.notconditionalevo
 	ld a, $1
 	ld [wd121], a
+	ld a,[hEvolveFlag]
+	set 0,a
+	ld [hEvolveFlag],a
 	push hl
 	ld a, [hl]
 	ld [wHPBarMaxHP + 1], a
@@ -240,6 +284,9 @@ Evolution_PartyMonLoop: ; loop over party mons
 
 .nextEvoEntry2
 	inc hl
+	ld a,[hEvolveFlags]
+	res 7,a
+	ld [hEvolveFlags],a
 	jp .evoEntryLoop
 
 .done
@@ -495,6 +542,134 @@ WriteMonMoves_ShiftMoveData: ; 3b04e (e:704e)
 	dec c
 	jr nz, .asm_3b050
 	ret
+
+JumpToAddress::
+	jp [hl]
+	
+EvoSubTypesPointerTable::
+	dw _EvSylveon
+	dw _EvPartyMon
+	dw _EvHeldItem
+	dw _EvPartyMonType
+	dw _EvSurfing
+	dw _EvGender
+	dw _EvStatBased
+	dw _EvMove
+	dw _EvFriendship
+	dw _EvLocation
+
+_EvSylveon::
+	ld bc, wPartyMon2 - wPartyMon1
+	ld hl, wPartyMon1Moves
+	ld a, [wWhichPokemon]
+	call AddNTimes
+	ld d,NUM_MOVES
+.loop
+	push hl
+	ld a,[hli]
+	and a
+	jr z,.finishupthensetcarry
+	ld hl,$0
+	ld b,$0
+	ld c,a
+	ld a,$6
+	call AddNTimes
+	ld b,h
+	ld c,l
+	ld hl,Moves + 4 ; change to Gen6Moves if Gen6Moves is set?
+	add hl,bc
+	ld a,[hl]
+	cp FAIRY
+	jr z,.finishupthenrescarry
+	pop hl
+	push hl
+	dec d
+	jr nz, .loop
+.finishupthensetcarry
+	scf
+.finishupthenrescarry
+	pop hl
+	ret
+
+_EvPartyMon::
+; evolve if party mon in [hl] is in wPartySpecies
+	dec de ; now reading subtype
+	dec de ; now reading extra data
+	ld a,[de] ; get the party mon that has to be in the party
+	ld b,a
+	ld c,$ff
+	ld hl,wPartySpecies
+.loop
+	ld a,[hli]
+	cp b
+	jr z,.foundmatch
+	cp c
+	jr nz,.loop
+	scf
+.foundmatch
+	ret
+	
+_EvHeldItem::
+	ld a,[wWhichPokemon]
+	ld hl,wPartyMon1CatchRate
+	ld bc,wPartyMon2 - wPartyMon1
+	call AddNTimes
+	dec de
+	dec de
+	ld a,[de]
+	cp [hl]
+	ret z
+	scf
+	ret
+	
+_EvPartyMonType::
+	ld a,[wWhichPokemon]
+	ld hl,wPartyMon1Type
+	ld bc,wPartyMon2
+	call AddNTimes
+	ld a,[de]
+	ld d,a
+	dec bc
+	ld a,[wPartyCount]
+	ld e,a
+.loop
+	ld a,[hli]
+	cp d
+	jr z,.foundmatch
+	ld a,[hl]
+	cp d
+	add hl,bc ; 16 bit adds don't affect flags
+	jr z,.foundmatch
+	dec e
+	jr nz,.loop
+	scf
+.foundmatch
+	ret
+	
+_EvSurfing::
+	ld a,[wWalkBikeSurfState]
+	cp $2 ; surfing?
+	ret z
+	scf
+	ret
+	
+_EvGender::
+	ld a,[wWhichPokemon]
+	ld hl,wPartyMon1DVs
+	ld bc,wPartyMon2 - wPartyMon1
+	call AddNTimes
+	bit 1,[hl]
+	
+	
+_EvStatBased::
+
+_EvMove::
+
+_EvFriendship::
+
+_EvLocation::
+
+_EvShedinja::
 
 Evolution_FlagAction: ; 3b057 (e:7057)
 	predef_jump FlagActionPredef
