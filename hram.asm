@@ -139,3 +139,4 @@ H_WHOSETURN EQU $FFF3 ; 0 on player’s turn, 1 on enemy’s turn
 
 hJoyInput EQU $FFF8
 
+hEvolveFlag EQU $FFFA
