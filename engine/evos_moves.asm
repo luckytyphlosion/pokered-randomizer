@@ -72,9 +72,9 @@ Evolution_PartyMonLoop: ; loop over party mons
 	bit 1,a
 	res 1,a
 	ld [hEvolveFlag],a
-	call z,.shedinjacheck
-	and a
-	jr z, Evolution_PartyMonLoop
+	call nz,ShedinjaCheck
+	bit 0,a
+	jr nz, Evolution_PartyMonLoop
 	ld b, a ; evolution type
 	cp EV_TRADE
 	jr z, .checkTradeEvo
@@ -106,22 +106,22 @@ Evolution_PartyMonLoop: ; loop over party mons
 	ld b, a ; evolution item
 	ld a, [wcf91] ; this is supposed to be the last item used, but it is also used to hold species numbers
 	cp b ; was the evolution item in this entry used?
-	jp nz, .nextEvoEntry1 ; if not, go to the next evolution entry
+	jp nz, .beforenextEvoEntry1 ; if not, go to the next evolution entry
 .checkLevel
 	ld a, [hli] ; level requirement
 	ld b, a
 	ld a, [wcfb9]
 	cp b ; is the mon's level greater than the evolution requirement?
-	jp c, .nextEvoEntry2 ; if so, go the next evolution entry
+	jp c, .beforenextEvoEntry2 ; if so, go the next evolution entry
 .asm_3adb6
 	ld [W_CURENEMYLVL], a
 	inc hl ; skip over possible pokemon to evo/extra data
 	ld a,[hld] ; go back to possible pokemon to evo/extra data
-	cp EV_TRADE ; reading next evolution data?
-	jr nc,.notconditionalevo
+	cp EV_SYLVEON ; reading next evolution data?
+	jr c,.notconditionalevo
 	inc hl
 	ld b,a
-	ld a,%10000000 ; flag for time based evo
+	ld a,%11000000 ; flag for time based evo (night is bit 7, day is bit 6)
 	and b
 	ld b,a
 	ld a,[hEvolveFlags]
@@ -145,7 +145,28 @@ Evolution_PartyMonLoop: ; loop over party mons
 	call JumpToAddress
 	pop hl
 	jp c,.nextEvoEntry2
-	
+	ld a,[hEvolveFlag]
+	and %11000000
+	jr z,.notconditionalevo
+	ld a,[W_PLAYTIMEMINUTES+1]
+	and a ; not sure about daa behaviour, just putting this here for safety
+	daa
+	swap a
+	ld b,a
+	ld a,[hEvolveFlag]
+	bit 7,a
+	res 7,a
+	ld [hEvolveFlag],a
+	jr z,.dayevo
+	bit 0,b
+	jp z,.nextEvoEntry2
+	jr .notconditionalevo
+
+.dayevo
+	res 6,a
+	ld [hEvolveFlag],a
+	bit 0,b
+	jp nz,.nextEvoEntry2
 .notconditionalevo
 	ld a, $1
 	ld [wd121], a
@@ -279,13 +300,23 @@ Evolution_PartyMonLoop: ; loop over party mons
 	ld h, d
 	jr .nextEvoEntry2
 
+.beforenextEvoEntry1
+	inc hl
+.beforenextEvoEntry2
+	inc hl
+	ld a,[hl]
+	cp EV_SYLVEON ; is the current entry conditional?
+	jr c,.nextEvoEntry3 ; if so, skip the re-adjustment check
+
+; fallthrough
 .nextEvoEntry1
 	inc hl
 
 .nextEvoEntry2
 	inc hl
+.nextEvoEntry3
 	ld a,[hEvolveFlags]
-	res 7,a
+	and %111111
 	ld [hEvolveFlags],a
 	jp .evoEntryLoop
 
@@ -811,7 +842,7 @@ _EvShedinja::
 	ret z
 	and a
 	ld a,[hEvolveFlags]
-	set 2,a
+	set 1,a
 	ld [hEvolveFlags],a
 	ret
 	
