@@ -552,12 +552,16 @@ EvoSubTypesPointerTable::
 	dw _EvHeldItem
 	dw _EvPartyMonType
 	dw _EvSurfing
-	dw _EvGender
-	dw _EvStatBased
+	dw _EvMale
+	dw _EvFemale
 	dw _EvMove
 	dw _EvFriendship
 	dw _EvLocation
-
+	dw _EvShedinja
+	dw _EvAtkGRDef
+	dw _EvDefGRAtk
+	dw _EvAtkISDef
+	
 _EvSylveon::
 	ld bc, wPartyMon2 - wPartyMon1
 	ld hl, wPartyMon1Moves
@@ -637,8 +641,8 @@ _EvPartyMonType::
 	cp d
 	jr z,.foundmatch
 	ld a,[hl]
+	add hl,bc
 	cp d
-	add hl,bc ; 16 bit adds don't affect flags
 	jr z,.foundmatch
 	dec e
 	jr nz,.loop
@@ -653,24 +657,164 @@ _EvSurfing::
 	scf
 	ret
 	
-_EvGender::
+_EvMale::
+	ld a,$1
+	jr EvGenderCommon
+	
+_EvFemale::
+	xor a
+; fallthrough
+EvGenderCommon::
+	push af
 	ld a,[wWhichPokemon]
 	ld hl,wPartyMon1DVs
 	ld bc,wPartyMon2 - wPartyMon1
 	call AddNTimes
-	bit 1,[hl]
+	pop af
+	and a
+	jr nz,.male
+	bit 4,[hl]
+	ret z ; carry flag is already reset
+	scf
+	ret
+.male
+	bit 4,[hl]
+	ret nz
+	scf
+	ret
 	
+_EvAtkGRDef::
+	xor a
+	jr _EvStatCommon
 	
-_EvStatBased::
+_EvDefGRAtk::
+	ld a,$1
+; fallthrough
+_EvStatCommon::
+	push af
+	ld a,[wWhichPokemon]
+	ld hl,wPartyMon1Attack
+	ld bc,wPartyMon2 - wPartyMon1
+	call AddNTimes
+	ld a,[hli]
+	ld c,[hl]
+	ld b,a
+	inc hl
+	ld a,[hli]
+	ld e,[hl]
+	ld d,a ; bc = attack | de = defense
+	pop af
+	dec a
+	jr z,.defgratk
+	dec a
+	jr z,.atkisdef
+atkgrdef::
+	ld a,b
+	cp d ; check if high byte is greater
+	ret nc
+	ld a,e
+	cp c ; check if low byte is greater
+	ret nc
+	scf
+	ret
+	
+_EvAtkISDef::
+	ld a,$2
+	jr _EvStatCommon
 
-_EvMove::
+.defgratk
+	ld a,d
+	cp b
+	ret nc
+	ld a,e
+	cp c
+	ret nc
+	scf
+	ret
+
+.atkisdef
+	ld a,b
+	cp d
+	scf
+	ret nz
+	ld a,e
+	cp c
+	ret z
+	scf
+	ret
 
 _EvFriendship::
+	ld a,[wWhichPokemon]
+	ld hl,wPartyMon1HPExp
+	ld bc,wPartyMon2 - wPartyMon1
+	call AddNTimes
+	ld d,h
+	ld e,l
+	ld a,10 ; num bytes for stat exp
+	ld hl,$0
+.loop
+	push af
+	ld a,[de]
+	inc de
+	ld b,a
+	ld a,[de]
+	inc de
+	ld c,a
+	add hl,bc
+	jr c,.finishupthenclearcarry
+	pop af
+	dec a
+	jr nz,.loop
+	ld de,$6400 ; 25600 stat exp
+	ld b,h
+	ld c,l
+	jr atkgrdef ; same purpose: see if bc > de
+	
+.finishupthenclearcarry
+	pop af
+	and a
+	ret
+	
+_EvMove::
+	ld a,[wWhichPokemon]
+	ld hl,wPartyMon1Moves
+	ld bc,wPartyMon2 - wPartyMon1
+	call AddNTimes
+	dec de
+	dec de
+	ld a,[de] ; move needed to evolve
+	ld c,NUM_MOVES
+.loop
+	cp [hl]
+	inc hl
+	jr z,.foundmatch
+	dec c
+	jr nz.loop
+	scf
+.foundmatch
+	ret
 
 _EvLocation::
+	dec de
+	dec de
+	ld a,[de]
+	ld hl,[W_CURMAP]
+	cp [hl]
+	scf
+	ret nz
+	and a
+	ret
 
 _EvShedinja::
-
+	ld a,[wPartyCount]
+	cp $6
+	ret z
+	and a
+	ld a,[hEvolveFlags]
+	set 2,a
+	ld [hEvolveFlags],a
+	ret
+	
 Evolution_FlagAction: ; 3b057 (e:7057)
 	predef_jump FlagActionPredef
 
