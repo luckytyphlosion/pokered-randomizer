@@ -80,6 +80,8 @@ RedrawPartyMenu_: ; 12ce3 (4:6ce3)
 	jr z,.teachMoveMenu
 	cp a,$05
 	jr z,.evolutionStoneMenu
+	cp a,$06
+	jr z,.evolutionStoneMenu
 	push hl
 	ld bc,14 ; 14 columns to the right
 	add hl,bc
@@ -194,7 +196,11 @@ RedrawPartyMenu_: ; 12ce3 (4:6ce3)
 	pop hl
 	push hl
 	add hl,bc
+	ld a,[wd07d]
+	cp $6
+	jr nz,.dontprintstring
 	call PlaceString
+.dontprintstring
 	pop hl
 	jr .printLevel
 
