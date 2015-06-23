@@ -24,3 +24,5 @@ EV_NOTHING EQU 18 ; for ordinary time based evos
 ; Evo Sub-Sub-Types
 EV_NIGHT EQU 7 ; bit 7
 EV_DAY EQU 6 ; bit 6
+EV_ICY_LOCATION EQU 0 ; all seafoam maps
+EV_FOREST_LOCATION EQU 1 ; viridian forest
