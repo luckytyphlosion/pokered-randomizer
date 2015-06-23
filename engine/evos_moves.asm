@@ -597,6 +597,11 @@ EvoSubTypesPointerTable::
 	dw _EvAtkGRDef
 	dw _EvDefGRAtk
 	dw _EvAtkISDef
+	dw _EvNothing
+	
+_EvNothing::
+	and a
+	ret
 	
 _EvSylveon::
 	ld bc, wPartyMon2 - wPartyMon1
