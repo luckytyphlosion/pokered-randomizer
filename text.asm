@@ -3378,6 +3378,13 @@ _UsedCutText:: ; a8315 (2a:4315)
 	line "away with CUT!"
 	prompt
 
+_ItemUsePokemonRefusedText::
+	TX_RAM wcf4b
+	line " refused the"
+	cont "@"
+	TX_RAM wcd6d
+	text "!"
+	prompt
 
 SECTION "Pokedex Text", ROMX, BANK[POKEDEX_TEXT]
 
