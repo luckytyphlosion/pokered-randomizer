@@ -839,13 +839,31 @@ _EvLocation::
 	dec de
 	dec de
 	ld a,[de]
-	ld hl,[W_CURMAP]
-	cp [hl]
-	scf
-	ret nz
-	and a
+	add a
+	ld c,a
+	ld b,$0
+	ld hl,_EvLocationPointerTable
+	add hl,bc
+	ld a,[hli]
+	ld h,[hl]
+	ld l,a
+	ld a,[W_CURMAP]
+	ld de,$1
+	call IsInArray
+	ccf
 	ret
-
+	
+_EvLocationPointerTable::
+	dw _EvIcyLocation
+	dw _EvForest
+	
+_EvIcyLocation::
+	db SEAFOAM_ISLANDS_1,SEAFOAM_ISLANDS_2,SEAFOAM_ISLANDS_3,SEAFOAM_ISLANDS_4,SEAFOAM_ISLANDS_5
+	db $ff
+	
+_EvForest::
+	db VIRIDIAN_FOREST
+	db $ff
 _EvShedinja::
 	ld a,[wPartyCount]
 	cp $6
