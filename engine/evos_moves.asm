@@ -72,7 +72,12 @@ Evolution_PartyMonLoop: ; loop over party mons
 	bit 1,a
 	res 1,a
 	ld [hEvolveFlag],a
-	call nz,ShedinjaCheck
+	jr z,.noShedinjaCheck
+	ld a,[$00fe] ; shedinja index
+	ld [wcf91],a
+	call AddPartyMon
+	ld a,[hEvolveFlag]
+.noShedinjaCheck
 	bit 0,a
 	jr nz, Evolution_PartyMonLoop
 	ld b, a ; evolution type
