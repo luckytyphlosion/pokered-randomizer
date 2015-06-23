@@ -59,13 +59,13 @@ ItemUsePtrTable: ; d5e1 (3:55e1)
 	dw UnusableItem      ; DOME_FOSSIL
 	dw UnusableItem      ; HELIX_FOSSIL
 	dw UnusableItem      ; SECRET_KEY
-	dw UnusableItem
+	dw ItemUseEvoItem    ; RAZOR_FANG
 	dw UnusableItem      ; BIKE_VOUCHER
 	dw ItemUseXAccuracy  ; X_ACCURACY
 	dw ItemUseEvoStone   ; LEAF_STONE
 	dw ItemUseCardKey    ; CARD_KEY
 	dw UnusableItem      ; NUGGET
-	dw UnusableItem      ; ??? PP_UP
+	dw ItemUseEvoItem    ; RAZOR_CLAW
 	dw ItemUsePokedoll   ; POKE_DOLL
 	dw ItemUseMedicine   ; FULL_HEAL
 	dw ItemUseMedicine   ; REVIVE
@@ -99,6 +99,11 @@ ItemUsePtrTable: ; d5e1 (3:55e1)
 	dw ItemUsePPRestore  ; MAX_ETHER
 	dw ItemUsePPRestore  ; ELIXER
 	dw ItemUsePPRestore  ; MAX_ELIXER
+	dw ItemUseEvoItem    ; OVAL_STONE
+	dw ItemUseEvoStone   ; SUN_STONE
+	dw ItemUseEvoStone   ; SHINY_STONE
+	dw ItemUseEvoStone   ; DUSK_STONE
+	dw ItemUseEvoStone   ; DAWN_STONE
 
 ItemUseBall: ; d687 (3:5687)
 	ld a,[W_ISINBATTLE]
@@ -2204,7 +2209,7 @@ ItemUseNotTime: ; e581 (3:6581)
 ItemUseNotYoursToUse: ; e586 (3:6586)
 	ld hl,ItemUseNotYoursToUseText
 	jr ItemUseFailed
-
+	
 ThrowBallAtTrainerMon: ; e58b (3:658b)
 	call GoPAL_SET_CF1C
 	call LoadScreenTilesFromBuffer1 ; restore saved screen
@@ -2241,7 +2246,15 @@ ItemUseNotTimeText: ; e5c0 (3:65c0)
 ItemUseNotYoursToUseText: ; e5c5 (3:65c5)
 	TX_FAR _ItemUseNotYoursToUseText
 	db "@"
-
+	
+ItemUsePokemonRefusedText::
+	TX_FAR _ItemUsePokemonRefusedText
+	db "@"
+	
+ItemUseGaveItemToPokemonText::
+	TX_FAR _ItemUseGaveItemToPokemonText
+	db "@"
+	
 ItemUseNoEffectText: ; e5ca (3:65ca)
 	TX_FAR _ItemUseNoEffectText
 	db "@"
@@ -2861,3 +2874,102 @@ Func_e9f0: ; e9f0 (3:69f0)
 	jr nz, .asm_e9f3
 	dec hl
 	ret
+
+ItemUseEvoItem::
+	ld a,[W_ISINBATTLE]
+	and a
+	jp nz,ItemUseNotTime
+	ld a,[wWhichPokemon]
+	push af
+	ld a,[wcf91]
+	ld [wd156],a
+	push af
+	ld a,$06 ; evolution item party menu
+	ld [wd07d],a
+	ld a,$ff
+	ld [wUpdateSpritesEnabled],a
+	call DisplayPartyMenu
+	pop bc
+	jr c,.canceledItemUse
+	ld a,b
+	ld [wcf91],a
+	pop af
+	ld [wWhichPokemon],a
+	ld hl,wPartySpecies
+	add l
+	jr nc,.nocarry
+	inc h
+.nocarry
+	ld l,a
+	ld a,[hl]
+	add a
+	ld b,$0
+	jr nc,.nocarry2
+	inc b
+.nocarry2
+	ld c,a
+	ld hl,EvosMovesPointerTable
+	add hl,bc
+	ld a,[hli]
+	ld h,[hl]
+	ld l,a
+	ld bc,38 ; max length for evo data
+	ld de,wcf4b
+	push de
+	ld a,BANK(EvosMovesPointerTable)
+	call FarCopyData
+	pop hl
+.loop
+	ld a,[hli] ; primary ev condition
+	cp EV_ITEM
+	ld bc,$3
+	jr nz,.notEVitem
+	add hl,bc
+	jr .loop
+.notEVitem
+	and a
+	jr z,.noEffect
+	dec c ; $0002
+	add hl,bc ; either at subconditon or next primary evo condition
+	ld a,[hld] ; now at extra data
+	cp EV_SYLVEON
+	jr c,.loop
+	cp EV_HELDITEM
+.helditemevo
+	ld a,[wd156]
+	ld d,[hl] ; read the correct item to give
+	push af ; save flags
+	inc c ; $0003
+	add hl,bc
+	pop af
+	jr nz,.loop ; flags from earlier compare
+	cp d ; is correct item?
+	jr nz,.loop
+	and a
+.printRefusedText
+	push af
+	ld a,[wWhichPokemon]
+	ld bc,11
+	ld hl,wPartyMonNicks
+	call AddNTimes
+	ld d,h
+	ld e,l
+	call CopyStringToCF4B
+	ld a,[wcf91]
+	call GetItemName
+	pop af
+	push af
+	ld hl,ItemUseGaveItemToPokemonText
+	jr nc,.success
+	ld hl,ItemUsePokemonRefusedText
+.success
+	call PrintText
+	pop af
+	jp c,ItemUseFailed
+	ld hl,wNumBagItems
+	ld a,1 ; remove 1 stone
+	ld [wcf96],a
+	jp RemoveItemFromInventory
+.noEffect
+	scf
+	jr .printRefusedText
