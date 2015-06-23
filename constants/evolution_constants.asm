@@ -20,6 +20,6 @@ EV_SHEDINJA EQU 14 ; add shedinja
 EV_ATKGRDEF EQU 15 ; tyrogue
 EV_DEFGRATK EQU 16
 EV_ATKISDEF EQU 17
-
+EV_NOTHING EQU 18 ; for ordinary time based evos
 ; Evo Sub-Sub-Types
 EV_TIME EQU 7 ; bit 7
