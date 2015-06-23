@@ -3680,7 +3680,8 @@ _AddPartyMon: ; f2e5 (3:72e5)
 	ld a, [hli]       ; type 2
 	ld [de], a
 	inc de
-	ld a, [hli]       ; unused (?)
+	ld a, [hli]
+	xor a ; clear catch rate
 	ld [de], a
 	ld hl, W_MONHMOVES
 	ld a, [hli]
