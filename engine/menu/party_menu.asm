@@ -192,13 +192,9 @@ RedrawPartyMenu_: ; 12ce3 (4:6ce3)
 .placeEvolutionStoneString
 	ld bc,20 + 9 ; down 1 row and right 9 columns
 	pop hl
-	ld a,[wd07d]
-	cp $6
 	push hl
 	add hl,bc
-	jr z,.pophlthenprintlevel
 	call PlaceString
-.pophlthenprintlevel
 	pop hl
 	jr .printLevel
 
