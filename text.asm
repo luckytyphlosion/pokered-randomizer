@@ -3386,6 +3386,14 @@ _ItemUsePokemonRefusedText::
 	text "!"
 	prompt
 
+_ItemUseGaveItemToPokemonText::
+	TX_RAM wcf4b
+	line " is now holding"
+	cont "the @"
+	TX_RAM wcd6d
+	text "!"
+	prompt
+	
 SECTION "Pokedex Text", ROMX, BANK[POKEDEX_TEXT]
 
 INCLUDE "text/pokedex.asm"
