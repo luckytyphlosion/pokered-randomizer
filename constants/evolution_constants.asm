@@ -22,4 +22,5 @@ EV_DEFGRATK EQU 16
 EV_ATKISDEF EQU 17
 EV_NOTHING EQU 18 ; for ordinary time based evos
 ; Evo Sub-Sub-Types
-EV_TIME EQU 7 ; bit 7
+EV_NIGHT EQU 7 ; bit 7
+EV_DAY EQU 6 ; bit 6
