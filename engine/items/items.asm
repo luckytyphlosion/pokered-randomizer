@@ -2880,6 +2880,14 @@ ItemUseEvoItem::
 	and a
 	jp nz,ItemUseNotTime
 	ld a,[wWhichPokemon]
+	ld d,a
+	ld hl,wPartyMon1CatchRate
+	ld bc,wPartyMon2 - wPartyMon1
+	call AddNTimes
+	ld a,[hl]
+	and a
+	jp nz,.noEffect
+	ld a,d
 	push af
 	ld a,[wcf91]
 	ld [wd156],a
@@ -2966,6 +2974,12 @@ ItemUseEvoItem::
 	call PrintText
 	pop af
 	jp c,ItemUseFailed
+	ld a,[wWhichPokemon]
+	ld hl,wPartyMon1CatchRate
+	ld bc,wPartyMon2 - wPartyMon1
+	call AddNTimes
+	ld a,[wcf91]
+	ld [hl],a ; copy item to catch rate
 	ld hl,wNumBagItems
 	ld a,1 ; remove 1 stone
 	ld [wcf96],a
